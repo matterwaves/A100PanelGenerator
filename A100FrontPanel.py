@@ -72,7 +72,7 @@ class A100FrontPanel(pcbnew.ActionPlugin):
     #Component : front panel pairs
     #Must be manually updated here
     PANEL_MOUNT_DICT={'RJ45':"MountingHole_RJ45",
-                'sma_CONSMA008G':"MountingHole_3.5mm",
+                'sma_CONSMA008G':"MountingHole_sma",
                 'pot_bourns_PTV09':"MountingHole_7.0mm_PTV09",
                 'spdt_M_NKK':"MountingHole_3.5mm",
                 'PlaceHolder_voltmeter':"MountingHole_voltmeter"}
