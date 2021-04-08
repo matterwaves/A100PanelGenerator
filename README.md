@@ -17,3 +17,13 @@ I couldnt get the plugin to register in kicad.
 
 TODO: Parse text elements to generate silkscreen text on front panel 
             
+            
+        
+        
+        
+## Usage
+
+* Open up the pcb you want to use as a template, `fname.kicad_pcb`
+* Open the python console
+* `> A100FrontPanel().generatePanel()`
+* The script will generate `fname-front-panel.kicad_pcb`, overwriting if it already exists
