@@ -75,7 +75,9 @@ class A100FrontPanel(pcbnew.ActionPlugin):
                 'sma_CONSMA008G':"MountingHole_sma",
                 'pot_bourns_PTV09':"MountingHole_7.0mm_PTV09",
                 'spdt_M_NKK':"MountingHole_3.5mm",
-                'PlaceHolder_voltmeter':"MountingHole_voltmeter"}
+                'PlaceHolder_voltmeter':"MountingHole_voltmeter",
+                "DSUB-9_Female_Vertical_P2.74x2.84mm_MountingHoles":"MountingHole_DSUB-9"}
+    SPECIAL_EDGES=["MountingHole_DSUB-9","MountingHole_RJ45", "MountingHole_voltmeter"]
 
     def __init__(self,fname=None):
         if fname == None:
@@ -187,15 +189,28 @@ class A100FrontPanel(pcbnew.ActionPlugin):
             if componentName in A100FrontPanel.PANEL_MOUNT_DICT.keys():
                 print(componentName,module.GetCenter())
                 self.placeFootprint(module.GetCenter(),module.GetOrientationDegrees(),A100FrontPanel.PANEL_MOUNT_DICT[componentName])
+            for graphic in module.GraphicalItemsList():
+                if graphic.GetLayerName() == "B.Fab":
+                    ## Create graphic in fp on F_SilkS in identical position
+                    graphic.SetLayer(pcbnew.F_SilkS)
 
+
+        #Graphics conversions
         for module in self.fp.GetModules():
-            ## Manually add square edge cuts for certain components
-            ## Rectangular holes are not possible in library footprint
-            ## Copy graphical elements from Dwgs.User to Edge.Cuts
-            if str(module.GetFPID().GetLibItemName()) in ["MountingHole_RJ45", "MountingHole_voltmeter"]:
-                for graphic in module.GraphicalItemsList():
+            for graphic in module.GraphicalItemsList():
+                ## Convert graphical elements in Dwgs.User to edge cuts in special components
+                if str(module.GetFPID().GetLibItemName()) in self.SPECIAL_EDGES:
                    if graphic.GetLayerName() == "Dwgs.User":
                        graphic.SetLayer(pcbnew.Edge_Cuts)
+                ## Convert graphical elements in B.Fab to F.Silks
+                if graphic.GetLayerName() == "F.SilkS":
+                    #return graphic
+                    #graphic.SetForceVisible(False)
+                    graphic.SetLayer(pcbnew.F_Fab)
+            module.SetValue("")
+            module.SetReference("")
+        return module
+
 
 
     def generatePanel(self):
@@ -203,16 +218,22 @@ class A100FrontPanel(pcbnew.ActionPlugin):
         run this on the real circuit to
         extract information needed for generating front panel
         """
+        print("getting dimensions")
         self.getDimensions()
+        print("drawing edges")
         self.drawEdges()
+        print("Making rail mount holes")
         self.railMounts()
-        self.componentMounts()
+        print("Making component holes")
+        graphic = self.componentMounts()
         ## Make copper pour for front and back layers
+        print("Making copper pours")
         self.fullZone(pcbnew.F_Cu)
         self.fullZone(pcbnew.B_Cu)
         ## save new front panel file
+        print("Saving file")
         self.fp.Save(self.panelFname)
-        return
+        return graphic
 
     def Run(self):
         self.generatePanel()
@@ -235,6 +256,8 @@ class A100FrontPanel(pcbnew.ActionPlugin):
 #        A100FrontPanel(sys.argv[1]).generatePanel()
 
 
+print("Usage: A100FrontPanel().generatePanel()")
+returned=A100FrontPanel().generatePanel()
 
 
 
