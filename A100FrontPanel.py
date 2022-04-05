@@ -61,6 +61,8 @@ def hp_to_mm(hp):
         return 141.90
     elif hp == 42:
         return 213.00
+    else:
+        return hp*0.2*25.4
 
 
 
@@ -68,7 +70,8 @@ class A100FrontPanel(pcbnew.ActionPlugin):
     U3_HEIGHT_MM=128.5
     MAX_PCB_HEIGHT_MM=112
     RAIL_MOUNT_FOOTPRINT="MountingHole_M3_slot"
-    FOOTPRINT_LIB="/home/user/repos/flyg-electronics/flyg-electronics-common/footprints/matterwave.pretty"
+    FOOTPRINT_LIBS=["/home/user/repos/flyg-electronics/flyg-electronics-common/footprints/matterwave.pretty",
+            "/home/user/repos/synth_libs/synth_components.pretty"]
     #Component : front panel pairs
     #Must be manually updated here
     PANEL_MOUNT_DICT={'RJ45':"MountingHole_RJ45",
@@ -76,7 +79,10 @@ class A100FrontPanel(pcbnew.ActionPlugin):
                 'pot_bourns_PTV09':"MountingHole_7.0mm_PTV09",
                 'spdt_M_NKK':"MountingHole_3.5mm",
                 'PlaceHolder_voltmeter':"MountingHole_voltmeter",
-                "DSUB-9_Female_Vertical_P2.74x2.84mm_MountingHoles":"MountingHole_DSUB-9"}
+                "DSUB-9_Female_Vertical_P2.74x2.84mm_MountingHoles":"MountingHole_DSUB-9",
+                "dual-pot-P120":"MountingHole-dual-pot-P120",
+                "mono-jack-thonk":"MountingHole-mono-jack-thonk",
+                "voltmeter":"MountingHole_voltmeter"}
     SPECIAL_EDGES=["MountingHole_DSUB-9","MountingHole_RJ45", "MountingHole_voltmeter"]
 
     def __init__(self,fname=None):
@@ -95,13 +101,17 @@ class A100FrontPanel(pcbnew.ActionPlugin):
         self.fp=pcbnew.LoadBoard(self.panelFname)
         self.getDimensions()
 
-    def getDimensions(self):
+    def getDimensions(self, hp=None):
         # Use pcb border to generate front panel border
-        bbox=self.pcb.GetBoardEdgesBoundingBox()
-        self.origin=bbox.Centre()
-        self.pcbWidth=bbox.GetWidth()
-        self.pcbHeight=bbox.GetHeight()
-        self.hp=mm_to_hp(nm_to_mm(self.pcbWidth))
+        if hp is None:
+            bbox=self.pcb.GetBoardEdgesBoundingBox()
+            self.origin=bbox.Centre()
+            self.pcbWidth=bbox.GetWidth()
+            self.pcbHeight=bbox.GetHeight()
+            self.hp=mm_to_hp(nm_to_mm(self.pcbWidth))
+        else:
+            self.hp=hp
+
         self.fpWidth=mm_to_nm(hp_to_mm(self.hp))
         self.fpHeight=mm_to_nm(A100FrontPanel.U3_HEIGHT_MM)
         print("Board width: {} mm, --> {} hp panel with {} mm clearance/side ".format(self.pcbWidth/1e6,self.hp,(self.hp*5.08-self.pcbWidth/1e6)/2))
@@ -110,10 +120,15 @@ class A100FrontPanel(pcbnew.ActionPlugin):
 
     def placeFootprint(self,pt,orientation,name):
         io = pcbnew.PCB_IO()
-        footprint = io.FootprintLoad(A100FrontPanel.FOOTPRINT_LIB,name)
-        footprint.SetPosition(pt)
-        footprint.SetOrientationDegrees(orientation)
-        self.fp.Add(footprint)
+        for lib in A100FrontPanel.FOOTPRINT_LIBS:
+            try:
+                footprint = io.FootprintLoad(lib,name)
+                footprint.SetPosition(pt)
+                footprint.SetOrientationDegrees(orientation)
+                self.fp.Add(footprint)
+                break
+            except:
+                pass
         #pcbnew.Refresh()
 
     def drawEdges(self):
@@ -213,13 +228,15 @@ class A100FrontPanel(pcbnew.ActionPlugin):
 
 
 
-    def generatePanel(self):
+    def generatePanel(self,hp=None):
         """
         run this on the real circuit to
         extract information needed for generating front panel
+        set hp arg to override panel width
+        useful for making blank panels
         """
         print("getting dimensions")
-        self.getDimensions()
+        self.getDimensions(hp=hp)
         print("drawing edges")
         self.drawEdges()
         print("Making rail mount holes")
@@ -247,6 +264,8 @@ class A100FrontPanel(pcbnew.ActionPlugin):
         self.__plugin_path = inspect.getfile(self.__class__)
 
 
+
+
 #A100FrontPanel().register()
 
 #if __name__ == '__main__':
@@ -257,7 +276,7 @@ class A100FrontPanel(pcbnew.ActionPlugin):
 
 
 print("Usage: A100FrontPanel().generatePanel()")
-returned=A100FrontPanel().generatePanel()
+#returned=A100FrontPanel().generatePanel()
 
 
 
